@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nexus AI | ChatGPT-style OpenRouter Free Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark-dimmed.min.css" />
+  <link rel="stylesheet" href="./src/style.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "marked": "https://esm.sh/marked@15.0.6",
+      "highlight.js": "https://esm.sh/highlight.js@11.11.1"
+    }
+  }
+  </script>
+</head>
+<body class="dark-theme">
+  <div id="app" class="app-layout">
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="brand-logo">
+            <span class="logo-glow"></span>
+            <div class="logo-icon" id="logoIconContainer"></div>
+          </div>
+          <div class="brand-info">
+            <span class="brand-name">Nexus AI</span>
+            <span class="brand-badge">OpenRouter Free</span>
+          </div>
+        </div>
+        <button id="closeSidebarBtn" class="icon-btn mobile-only" title="Close sidebar"></button>
+      </div>
+
+      <div class="sidebar-actions">
+        <button id="newChatBtn" class="btn btn-primary new-chat-btn">
+          <span class="btn-icon" id="newChatIcon"></span>
+          <span>New Chat</span>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-tab="chat" id="navChatBtn">
+          <span class="nav-icon" id="navChatIcon"></span>
+          <span>Chat Stream</span>
+        </button>
+        <button class="nav-item" data-tab="image-studio" id="navImageBtn">
+          <span class="nav-icon" id="navImageIcon"></span>
+          <span>Image Studio (Flux)</span>
+          <span class="nav-badge">Free</span>
+        </button>
+        <button class="nav-item" data-tab="video-studio" id="navVideoBtn">
+          <span class="nav-icon" id="navVideoIcon"></span>
+          <span>Video Studio (AI)</span>
+          <span class="nav-badge">Free</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-section-title">
+        <span>Recent Chats</span>
+        <button id="clearAllChatsBtn" class="icon-btn small" title="Clear all chats"></button>
+      </div>
+
+      <div class="sessions-list" id="sessionsList">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="api-status-card" id="apiStatusCard">
+          <div class="status-indicator">
+            <span class="status-dot warning" id="sidebarStatusDot"></span>
+            <div class="status-text">
+              <span class="status-label" id="sidebarStatusLabel">Checking API Key...</span>
+              <span class="status-sub" id="sidebarStatusSub">Click Settings to test</span>
+            </div>
+          </div>
+        </div>
+
+        <button id="openSettingsBtn" class="btn btn-secondary settings-trigger-btn">
+          <span class="btn-icon" id="settingsIcon"></span>
+          <span>Settings & API Key</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CHAT CONTAINER -->
+    <main class="main-content">
+      <!-- TOP NAVBAR -->
+      <header class="top-nav">
+        <div class="nav-left">
+          <button id="toggleSidebarBtn" class="icon-btn" title="Toggle Sidebar"></button>
+          
+          <!-- MODEL SELECTOR DROPDOWN -->
+          <div class="model-dropdown-container">
+            <button id="modelSelectBtn" class="model-select-btn">
+              <span class="model-icon" id="modelCpuIcon"></span>
+              <div class="model-label-wrap">
+                <span class="model-current-name" id="currentModelName">Gemini 2.0 Flash Exp</span>
+                <span class="model-tag-free">FREE</span>
+              </div>
+              <span class="dropdown-chevron" id="modelChevronIcon"></span>
+            </button>
+
+            <!-- DROPDOWN MENU -->
+            <div id="modelDropdownMenu" class="model-dropdown-menu hidden">
+              <div class="model-search-box">
+                <span class="search-icon" id="modelSearchIcon"></span>
+                <input type="text" id="modelSearchInput" placeholder="Search OpenRouter free models..." />
+                <button id="refreshModelsBtn" class="icon-btn small" title="Refresh models from OpenRouter"></button>
+              </div>
+              <div class="model-list-scroll" id="modelListScroll">
+                <!-- Dynamically loaded models -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="nav-center">
+          <!-- MODE SELECTOR PILLS -->
+          <div class="mode-pills">
+            <button class="mode-pill active" data-mode="chat">
+              <span id="pillChatIcon"></span> Chat
+            </button>
+            <button class="mode-pill" data-mode="image">
+              <span id="pillImageIcon"></span> Generate Image
+            </button>
+            <button class="mode-pill" data-mode="video">
+              <span id="pillVideoIcon"></span> Generate Video
+            </button>
+          </div>
+        </div>
+
+        <div class="nav-right">
+          <div class="connection-status-pill" id="connStatusPill">
+            <span class="status-dot warning" id="topNavStatusDot"></span>
+            <span class="status-text" id="topNavStatusText">No API Key</span>
+          </div>
+          <button id="topSettingsBtn" class="icon-btn" title="API Settings"></button>
+        </div>
+      </header>
+
+      <!-- CONTENT PANELS -->
+      <div class="panels-wrapper">
+        <!-- 1. CHAT PANEL -->
+        <section id="chatPanel" class="view-panel active">
+          <div class="chat-viewport" id="chatViewport">
+            <!-- WELCOME SCREEN -->
+            <div id="welcomeScreen" class="welcome-screen">
+              <div class="welcome-badge">
+                <span class="sparkle-icon" id="welcomeSparkleIcon"></span>
+                <span>Powered by OpenRouter Free Tier & Pollinations AI</span>
+              </div>
+              <h1 class="welcome-title">What would you like to build or discover today?</h1>
+              <p class="welcome-sub">
+                ChatGPT ultra experience with unlimited file uploads, high-speed reasoning, 4K image creation, and AI video generator.
+              </p>
+
+              <div class="prompt-starters">
+                <button class="starter-card" data-prompt="Explain quantum computing principles with clear real-world analogies and diagrams.">
+                  <span class="starter-icon">⚛️</span>
+                  <div class="starter-content">
+                    <span class="starter-title">Explain Quantum Computing</span>
+                    <span class="starter-desc">Complex concepts simplified with analogies</span>
+                  </div>
+                </button>
+                <button class="starter-card" data-action="image" data-prompt="Cyberpunk neon city street at night in rain, 8k resolution, photorealistic, cinematic lighting, reflections">
+                  <span class="starter-icon">🎨</span>
+                  <div class="starter-content">
+                    <span class="starter-title">Generate 4K Wallpaper</span>
+                    <span class="starter-desc">Create high-res Flux.1 image instantly</span>
+                  </div>
+                </button>
+                <button class="starter-card" data-action="video" data-prompt="A futuristic flying car cruising through neon skyscrapers in a rain storm, cinematic motion">
+                  <span class="starter-icon">🎬</span>
+                  <div class="starter-content">
+                    <span class="starter-title">Create AI Video</span>
+                    <span class="starter-desc">Cinematic video generation from prompt</span>
+                  </div>
+                </button>
+                <button class="starter-card" data-prompt="Write a complete Python web scraper script using BeautifulSoup and async HTTP requests with error handling.">
+                  <span class="starter-icon">💻</span>
+                  <div class="starter-content">
+                    <span class="starter-title">Write Python Code</span>
+                    <span class="starter-desc">DeepSeek / Qwen 2.5 Coder coding assistant</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- CHAT MESSAGES -->
+            <div id="messagesContainer" class="messages-container"></div>
+          </div>
+
+          <!-- SCROLL TO BOTTOM BUTTON -->
+          <button id="scrollToBottomBtn" class="scroll-bottom-btn hidden" title="Scroll to bottom"></button>
+
+          <!-- BOTTOM INPUT BAR -->
+          <div class="chat-input-wrapper">
+            <!-- FILE ATTACHMENTS PREVIEW STRIP -->
+            <div id="attachmentsPreviewStrip" class="attachments-preview-strip hidden"></div>
+
+            <!-- INPUT COMPOSER CONTAINER -->
+            <div class="composer-container" id="composerContainer">
+              <!-- ATTACHMENT BUTTON -->
+              <input type="file" id="fileUploadInput" multiple style="display: none;" />
+              <button id="attachFileBtn" class="composer-btn attachment-btn" title="Upload files, images, PDFs, code (Unlimited)">
+                <span id="composerPaperclipIcon"></span>
+              </button>
+
+              <!-- PROMPT TEXTAREA -->
+              <div class="composer-textarea-wrap">
+                <div class="mode-indicator-chip hidden" id="composerModeChip">
+                  <span id="composerModeChipText">Mode: Image</span>
+                  <button id="clearModeChipBtn" class="chip-close-btn">&times;</button>
+                </div>
+                <textarea
+                  id="chatPromptInput"
+                  class="chat-prompt-textarea"
+                  placeholder="Ask anything, type /image or /video, or drop files here..."
+                  rows="1"
+                ></textarea>
+              </div>
+
+              <!-- ACTION BUTTON (SEND / STOP) -->
+              <button id="sendPromptBtn" class="composer-btn send-btn" title="Send prompt">
+                <span id="composerSendIcon"></span>
+              </button>
+            </div>
+
+            <div class="composer-footnote">
+              <span>Unlimited file & image uploads supported. Free OpenRouter models may have rate limits.</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. IMAGE STUDIO PANEL -->
+        <section id="imageStudioPanel" class="view-panel">
+          <div class="studio-container">
+            <div class="studio-header">
+              <div class="studio-title-wrap">
+                <span class="studio-icon" id="studioImageIcon"></span>
+                <div>
+                  <h2>AI Image Generation Studio</h2>
+                  <p>Create stunning 4K images with Flux.1, SDXL, and Pollinations AI — 100% Free & Unlimited</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="studio-grid">
+              <div class="studio-controls-card">
+                <div class="form-group">
+                  <label for="imgStudioPrompt">Image Prompt</label>
+                  <textarea id="imgStudioPrompt" class="form-textarea" rows="3" placeholder="Describe the image you want to create in vivid detail..."></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="imgStudioNegPrompt">Negative Prompt (Optional)</label>
+                  <input type="text" id="imgStudioNegPrompt" class="form-input" placeholder="blurry, distorted, low quality, bad anatomy..." />
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label>Style Preset</label>
+                    <select id="imgStudioStyle" class="form-select">
+                      <option value="flux">✨ Flux.1 Ultra (Default)</option>
+                      <option value="flux-realism">📸 Photorealistic Portrait / Landscape</option>
+                      <option value="flux-anime">🎨 Anime & Manga Art</option>
+                      <option value="flux-3d">🧊 3D Render & Pixar Style</option>
+                      <option value="turbo">⚡ SDXL Turbo (High Speed)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group flex-1">
+                    <label>Aspect Ratio</label>
+                    <select id="imgStudioRatio" class="form-select">
+                      <option value="1:1">1:1 Square (1024x1024)</option>
+                      <option value="16:9">16:9 Landscape (1280x720)</option>
+                      <option value="9:16">9:16 Mobile Story / Reels (720x1280)</option>
+                      <option value="4:3">4:3 Standard (1024x768)</option>
+                      <option value="3:2">3:2 Photography (1080x720)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <button id="generateImgBtn" class="btn btn-primary full-width">
+                    <span id="generateImgIcon"></span>
+                    <span>Generate Image</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="studio-preview-card">
+                <div class="preview-header">
+                  <span>Output Preview</span>
+                  <div class="preview-actions">
+                    <button id="downloadImgBtn" class="btn btn-sm btn-secondary hidden">
+                      <span id="downloadImgIcon"></span> Download
+                    </button>
+                  </div>
+                </div>
+
+                <div id="imgPreviewCanvas" class="preview-canvas">
+                  <div class="empty-preview">
+                    <span class="empty-icon" id="emptyImgIcon"></span>
+                    <p>Enter a prompt and hit Generate to create an image</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. VIDEO STUDIO PANEL -->
+        <section id="videoStudioPanel" class="view-panel">
+          <div class="studio-container">
+            <div class="studio-header">
+              <div class="studio-title-wrap">
+                <span class="studio-icon" id="studioVideoIcon"></span>
+                <div>
+                  <h2>AI Video Generation Studio</h2>
+                  <p>Generate animated AI video clips directly from text descriptions — Free & Instant</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="studio-grid">
+              <div class="studio-controls-card">
+                <div class="form-group">
+                  <label for="videoStudioPrompt">Video Prompt</label>
+                  <textarea id="videoStudioPrompt" class="form-textarea" rows="3" placeholder="Describe the motion, camera angle, and scene... e.g. An astronaut exploring an alien crystal cave with glowing flora, cinematic 4k"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label>Video Model</label>
+                  <select id="videoStudioModel" class="form-select">
+                    <option value="cogvideox">🎬 CogVideoX (High Quality Motion)</option>
+                    <option value="wan">✨ Wan 2.1 (Cinematic Smooth)</option>
+                  </select>
+                </div>
+
+                <div class="form-actions">
+                  <button id="generateVideoBtn" class="btn btn-primary full-width">
+                    <span id="generateVideoIcon"></span>
+                    <span>Generate AI Video</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="studio-preview-card">
+                <div class="preview-header">
+                  <span>Video Preview</span>
+                  <div class="preview-actions">
+                    <button id="downloadVideoBtn" class="btn btn-sm btn-secondary hidden">
+                      <span id="downloadVideoIcon"></span> Download
+                    </button>
+                  </div>
+                </div>
+
+                <div id="videoPreviewCanvas" class="preview-canvas">
+                  <div class="empty-preview">
+                    <span class="empty-icon" id="emptyVideoIcon"></span>
+                    <p>Enter a prompt and click Generate AI Video to begin</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settingsModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <span class="modal-icon" id="modalSettingsIcon"></span>
+            <div>
+              <h3>Settings & OpenRouter API</h3>
+              <p>Configure your API Key, test connectivity, and adjust preferences</p>
+            </div>
+          </div>
+          <button id="closeSettingsModalBtn" class="icon-btn" title="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <!-- API KEY SECTION -->
+          <div class="settings-box highlight">
+            <div class="box-header">
+              <div class="box-title">
+                <span id="boxKeyIcon"></span>
+                <span>OpenRouter API Key (Manual Entry)</span>
+              </div>
+              <a href="https://openrouter.ai/settings/keys" target="_blank" class="link-external">Get Free Key ↗</a>
+            </div>
+            
+            <p class="settings-help">
+              OpenRouter offers free models with <code>:free</code> suffix without charges. Paste your key below to connect.
+            </p>
+
+            <div class="input-with-action">
+              <input type="password" id="settingsApiKeyInput" class="form-input font-mono" placeholder="sk-or-v1-..." />
+              <button id="toggleKeyVisibilityBtn" class="btn-input-addon" title="Show/Hide Key">
+                <span id="eyeKeyIcon"></span>
+              </button>
+            </div>
+
+            <!-- CONNECTION TEST BUTTON & RESULTS -->
+            <div class="test-connection-section">
+              <button id="testConnectionBtn" class="btn btn-secondary">
+                <span id="testKeyIcon"></span>
+                <span>Test API Connection</span>
+              </button>
+              
+              <div id="testResultBox" class="test-result-box hidden">
+                <div class="result-header">
+                  <span class="result-badge" id="testResultBadge">Testing...</span>
+                  <span class="result-latency" id="testResultLatency"></span>
+                </div>
+                <div class="result-message" id="testResultMessage"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- FREE MODELS LIST & DEFAULT SELECTION -->
+          <div class="settings-box">
+            <div class="box-header">
+              <div class="box-title">
+                <span id="boxCpuIcon"></span>
+                <span>OpenRouter Free Models Hub</span>
+              </div>
+              <button id="modalRefreshModelsBtn" class="btn btn-sm btn-ghost">
+                <span id="modalRefreshIcon"></span> Refresh Models
+              </button>
+            </div>
+
+            <p class="settings-help">
+              Select your default free model for new conversations:
+            </p>
+
+            <div class="form-group">
+              <select id="defaultModelSelect" class="form-select font-mono"></select>
+            </div>
+
+            <div class="free-models-badges-wrap" id="freeModelsBadgesWrap">
+              <!-- Render badges of all free models -->
+            </div>
+          </div>
+
+          <!-- GENERATION CONFIGURATION -->
+          <div class="settings-box">
+            <div class="box-header">
+              <div class="box-title">
+                <span id="boxParamsIcon"></span>
+                <span>AI Persona & Parameters</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="systemPromptInput">System Instruction</label>
+              <textarea id="systemPromptInput" class="form-textarea" rows="2" placeholder="Instructions that define AI behavior..."></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="temperatureInput">Temperature: <span id="temperatureVal">0.7</span></label>
+                <input type="range" id="temperatureInput" min="0" max="1" step="0.05" value="0.7" class="form-range" />
+              </div>
+              <div class="form-group flex-1">
+                <label for="maxTokensInput">Max Tokens: <span id="maxTokensVal">4096</span></label>
+                <input type="range" id="maxTokensInput" min="512" max="16384" step="512" value="4096" class="form-range" />
+              </div>
+            </div>
+          </div>
+
+          <!-- DATA CLEAR SECTION -->
+          <div class="settings-box danger-zone">
+            <div class="box-header">
+              <div class="box-title">
+                <span id="boxTrashIcon"></span>
+                <span>Data Management</span>
+              </div>
+              <button id="modalClearAllDataBtn" class="btn btn-sm btn-danger">
+                Clear All Chats & Cache
+              </button>
+            </div>
+            <p class="settings-help">
+              Your API key and conversation history are stored only in your browser's LocalStorage for privacy and security.
+            </p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="cancelSettingsBtn" class="btn btn-secondary">Cancel</button>
+          <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FULLSCREEN MEDIA LIGHTBOX -->
+    <div id="mediaLightbox" class="lightbox-overlay hidden">
+      <button id="closeLightboxBtn" class="lightbox-close-btn">&times;</button>
+      <div class="lightbox-content">
+        <img id="lightboxImg" src="" alt="Enlarged view" class="hidden" />
+        <video id="lightboxVideo" src="" controls class="hidden"></video>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
