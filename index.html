@@ -58,6 +58,11 @@
           <span>Video Studio (AI)</span>
           <span class="nav-badge">Free</span>
         </button>
+        <button class="nav-item" data-tab="skills" id="navSkillsBtn">
+          <span class="nav-icon" id="navSkillsIcon"></span>
+          <span>AI Skills Hub</span>
+          <span class="nav-badge" id="activeSkillBadge">General</span>
+        </button>
       </nav>
 
       <div class="sidebar-section-title">
@@ -135,6 +140,10 @@
         </div>
 
         <div class="nav-right">
+          <button id="quickSkillSelectorBtn" class="skill-pill-btn" title="Choose or switch active AI Skill">
+            <span id="quickSkillEmoji">⚡</span>
+            <span id="quickSkillName">Skill: General</span>
+          </button>
           <div class="connection-status-pill" id="connStatusPill">
             <span class="status-dot warning" id="topNavStatusDot"></span>
             <span class="status-text" id="topNavStatusText">No API Key</span>
@@ -213,9 +222,15 @@
 
               <!-- PROMPT TEXTAREA -->
               <div class="composer-textarea-wrap">
-                <div class="mode-indicator-chip hidden" id="composerModeChip">
-                  <span id="composerModeChipText">Mode: Image</span>
-                  <button id="clearModeChipBtn" class="chip-close-btn">&times;</button>
+                <div class="composer-chips-row">
+                  <div class="mode-indicator-chip hidden" id="composerModeChip">
+                    <span id="composerModeChipText">Mode: Image</span>
+                    <button id="clearModeChipBtn" class="chip-close-btn">&times;</button>
+                  </div>
+                  <div class="active-skill-chip hidden" id="composerSkillChip">
+                    <span id="composerSkillChipText">Skill: Code Architect</span>
+                    <button id="clearSkillChipBtn" class="chip-close-btn" title="Remove active skill">&times;</button>
+                  </div>
                 </div>
                 <textarea
                   id="chatPromptInput"
@@ -370,6 +385,49 @@
               </div>
             </div>
           </div>
+        <!-- 4. AI SKILLS HUB PANEL -->
+        <section id="skillsPanel" class="view-panel">
+          <div class="studio-container">
+            <div class="studio-header">
+              <div class="studio-title-wrap skills-header-flex">
+                <div class="skills-header-info">
+                  <span class="studio-icon" id="studioSkillsIcon"></span>
+                  <div>
+                    <h2>AI Skills Hub & Custom Creator</h2>
+                    <p>Supercharge your AI with specialized expert personas or design your own custom skills</p>
+                  </div>
+                </div>
+                <button id="openCreateSkillModalBtn" class="btn btn-primary">
+                  <span id="createSkillPlusIcon"></span>
+                  <span>+ Create Custom Skill</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- SKILLS FILTER & SEARCH -->
+            <div class="skills-filter-card">
+              <div class="skills-search-input-wrap">
+                <span class="search-icon" id="skillsSearchIcon"></span>
+                <input type="text" id="skillsSearchInput" placeholder="Search skills by name, keyword, or specialty..." />
+              </div>
+              <div class="skills-category-pills" id="skillsCategoryPills">
+                <button class="filter-pill active" data-cat="all">All Skills</button>
+                <button class="filter-pill" data-cat="Coding">💻 Coding</button>
+                <button class="filter-pill" data-cat="Creative">🎨 Creative</button>
+                <button class="filter-pill" data-cat="Analysis">📊 Analysis</button>
+                <button class="filter-pill" data-cat="Language">🇱🇰 Language</button>
+                <button class="filter-pill" data-cat="Writing">✍️ Writing</button>
+                <button class="filter-pill" data-cat="Research">🔬 Research</button>
+                <button class="filter-pill" data-cat="Security">🛡️ Security</button>
+                <button class="filter-pill" data-cat="Custom">✨ Custom</button>
+              </div>
+            </div>
+
+            <!-- SKILLS GRID -->
+            <div class="skills-grid" id="skillsGrid">
+              <!-- Dynamically populated skills cards -->
+            </div>
+          </div>
         </section>
       </div>
     </main>
@@ -498,6 +556,63 @@
         <div class="modal-footer">
           <button id="cancelSettingsBtn" class="btn btn-secondary">Cancel</button>
           <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CREATE CUSTOM SKILL MODAL -->
+    <div id="customSkillModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <span class="modal-icon" id="modalSkillIcon">✨</span>
+            <div>
+              <h3>Create Custom AI Skill</h3>
+              <p>Define a unique expert persona with specialized system instructions</p>
+            </div>
+          </div>
+          <button id="closeSkillModalBtn" class="icon-btn" title="Close">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group" style="width: 80px;">
+              <label for="newSkillEmoji">Emoji</label>
+              <input type="text" id="newSkillEmoji" class="form-input" value="🧠" maxlength="4" style="text-align: center; font-size: 18px;" />
+            </div>
+            <div class="form-group flex-1">
+              <label for="newSkillName">Skill Name</label>
+              <input type="text" id="newSkillName" class="form-input" placeholder="e.g. Crypto Analyst, Legal Advisor, Fitness Coach" />
+            </div>
+            <div class="form-group" style="width: 140px;">
+              <label for="newSkillCategory">Category</label>
+              <select id="newSkillCategory" class="form-select">
+                <option value="Coding">Coding</option>
+                <option value="Creative">Creative</option>
+                <option value="Analysis">Analysis</option>
+                <option value="Writing">Writing</option>
+                <option value="Language">Language</option>
+                <option value="Research">Research</option>
+                <option value="Security">Security</option>
+                <option value="Custom" selected>Custom</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="newSkillDesc">Short Description</label>
+            <input type="text" id="newSkillDesc" class="form-input" placeholder="Brief 1-line summary of what this skill specializes in..." />
+          </div>
+
+          <div class="form-group">
+            <label for="newSkillPrompt">Specialized System Prompt / Instructions</label>
+            <textarea id="newSkillPrompt" class="form-textarea" rows="6" placeholder="You are an expert in... Always structure your answers as... Adhere strictly to the following rules:..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="cancelSkillModalBtn" class="btn btn-secondary">Cancel</button>
+          <button id="saveCustomSkillBtn" class="btn btn-primary">Create & Activate Skill</button>
         </div>
       </div>
     </div>

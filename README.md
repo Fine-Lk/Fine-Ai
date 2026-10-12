@@ -55,6 +55,7 @@
 | **Code Highlighting** | JetBrains Mono syntax highlighting with 1-click **Copy Code** button. |
 | **4K Image Studio** | Ultra-high-resolution image generation powered by Flux.1 & SDXL Turbo with presets and aspect ratios. |
 | **AI Video Studio** | Text-to-Video generation using CogVideoX and Wan AI with video player & instant download. |
+| **🧠 AI Skills Hub & Creator** | Pre-built specialized personas (Code Architect, 4K Prompt Engineer, Data Analyst, Sinhala Master, Academic Researcher) + Create your own custom skills! |
 | **100% Client-Side Privacy** | API keys and conversations are stored exclusively in your browser's `localStorage`. |
 
 ---
@@ -104,6 +105,21 @@ Generate motion video clips from text:
   - Select model (`CogVideoX` or `Wan 2.1`).
   - Click **Generate AI Video** -> Play inline or Download MP4!
 
+### 7. 🧠 AI Skills Hub & Custom Skills Creator
+Supercharge your AI by equipping it with specialized expert personas or create your own custom skills:
+- **Browse Pre-Built Skills**: Click **AI Skills Hub** in the sidebar. Select from:
+  - 💻 **Code Architect & Bug Hunter**: Senior principal software engineer, clean architecture & bug fixes.
+  - 🎨 **4K Prompt Engineer & Visualizer**: Generates hyper-detailed lighting, lenses, and camera prompts for Flux/Midjourney.
+  - 📊 **Data Analyst & CSV Visualizer**: Executive summaries, statistical analysis, and Python chart generation.
+  - 🇱🇰 **Sinhala Master Translator**: Natural, idiomatically accurate Sinhala translations and cultural nuance.
+  - 🔬 **Academic Researcher**: Literature synthesis, rigorous methodology reviews, and APA/IEEE citations.
+  - ✍️ **Viral Copywriter & SEO Wizard**: High-converting hooks, threads, and SEO articles.
+  - 🛡️ **Cybersecurity Specialist**: Code audits, OWASP Top 10 vulnerabilities, and remediation advice.
+- **Activate a Skill**: Click **"⚡ Activate Skill"** on any card. When active, a glowing pill appears in the top nav and chat composer.
+- **Create Custom Skill**: Click **"+ Create Custom Skill"** to define your own persona:
+  - Name, Emoji avatar, Category, and Specialized System Instructions!
+  - Saved automatically to your browser and available across all chats.
+
 ---
 
 ## 🇱🇰 සිංහල මාර්ගෝපදේශය (Sinhala User Guide)
@@ -133,6 +149,16 @@ Generate motion video clips from text:
 - **AI Videos සෑදීම**:
   - Chat එකේ `/video <විස්තරය>` ටයිප් කරන්න (උදා: `/video futuristic supercar driving through neon city night rain`).
   - නැතහොත් **Video Studio (AI)** tab එකෙන් CogVideoX / Wan තාක්ෂණයෙන් AI Video clips සාදා Download කරගන්න.
+
+### 5. 🧠 AI Skills භාවිතා කිරීම සහ අලුත් Custom Skills සෑදීම
+- **Skills සක්‍රීය කිරීම**:
+  - Sidebar එකේ **AI Skills Hub** ක්ලික් කරන්න.
+  - කැමති Skill එකක ඇති **"⚡ Activate Skill"** ක්ලික් කරන්න (උදා: `Code Architect`, `Sinhala Master`, `Prompt Engineer`, `Data Analyst`).
+  - දැන් Chat කරන විට AI මඟින් එම ක්ෂේත්‍රයේ ප්‍රවීණයෙකු (Expert Specialist) ලෙස පිළිතුරු සපයයි.
+- **අලුත් Custom Skills සෑදීම**:
+  - **"+ Create Custom Skill"** ක්ලික් කරන්න.
+  - Skill Name, Emoji එකක්, Category එකක් සහ ඔබ කැමති විශේෂ උපදෙස් (System Prompt) ලියා Save කරන්න.
+  - එය ක්ෂණිකව සක්‍රීය වී ඔබගේ Chat වලට යොදාගත හැක!
 
 ---
 

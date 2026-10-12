@@ -197,11 +197,16 @@ export const OpenRouterAPI = {
 
     const payloadMessages = [];
 
-    // System prompt if provided
-    if (settings.systemPrompt) {
+    // System prompt & Active Skill if provided
+    let finalSystemPrompt = settings.systemPrompt || '';
+    if (settings.activeSkill && settings.activeSkill.prompt) {
+      finalSystemPrompt = `### ACTIVE AI SKILL: ${settings.activeSkill.name} (${settings.activeSkill.category || 'Specialist'})\n${settings.activeSkill.prompt}\n\n### GENERAL BEHAVIOR:\n${finalSystemPrompt}`;
+    }
+
+    if (finalSystemPrompt.trim()) {
       payloadMessages.push({
         role: 'system',
-        content: settings.systemPrompt
+        content: finalSystemPrompt.trim()
       });
     }
 

@@ -17,14 +17,17 @@ marked.setOptions({
 
 // App Controller State
 const appState = {
-  activeTab: 'chat', // 'chat' | 'image-studio' | 'video-studio'
+  activeTab: 'chat', // 'chat' | 'image-studio' | 'video-studio' | 'skills'
   inputMode: 'chat', // 'chat' | 'image' | 'video'
   currentModel: State.getSelectedModel(),
   availableModels: FALLBACK_FREE_MODELS,
   pendingAttachments: [], // [{ name, size, type, dataUrl, textContent }]
   isGenerating: false,
   abortController: null,
-  activeSession: null
+  activeSession: null,
+  activeSkill: State.getActiveSkill(),
+  selectedSkillCategory: 'all',
+  skillsSearchQuery: ''
 };
 
 // DOM Elements Cache
@@ -37,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSessions();
   setupSettingsUI();
   initModels();
+  initSkillsUI();
   checkApiKeyStatus();
 });
 
@@ -67,9 +71,15 @@ function initDOMElements() {
   DOM.navChatBtn = document.getElementById('navChatBtn');
   DOM.navImageBtn = document.getElementById('navImageBtn');
   DOM.navVideoBtn = document.getElementById('navVideoBtn');
+  DOM.navSkillsBtn = document.getElementById('navSkillsBtn');
+  DOM.activeSkillBadge = document.getElementById('activeSkillBadge');
+  DOM.quickSkillSelectorBtn = document.getElementById('quickSkillSelectorBtn');
+  DOM.quickSkillEmoji = document.getElementById('quickSkillEmoji');
+  DOM.quickSkillName = document.getElementById('quickSkillName');
   DOM.chatPanel = document.getElementById('chatPanel');
   DOM.imageStudioPanel = document.getElementById('imageStudioPanel');
   DOM.videoStudioPanel = document.getElementById('videoStudioPanel');
+  DOM.skillsPanel = document.getElementById('skillsPanel');
 
   // Chat Views & Composer
   DOM.chatViewport = document.getElementById('chatViewport');
@@ -85,6 +95,24 @@ function initDOMElements() {
   DOM.composerModeChip = document.getElementById('composerModeChip');
   DOM.composerModeChipText = document.getElementById('composerModeChipText');
   DOM.clearModeChipBtn = document.getElementById('clearModeChipBtn');
+  DOM.composerSkillChip = document.getElementById('composerSkillChip');
+  DOM.composerSkillChipText = document.getElementById('composerSkillChipText');
+  DOM.clearSkillChipBtn = document.getElementById('clearSkillChipBtn');
+
+  // AI Skills Hub Elements
+  DOM.openCreateSkillModalBtn = document.getElementById('openCreateSkillModalBtn');
+  DOM.skillsSearchInput = document.getElementById('skillsSearchInput');
+  DOM.skillsCategoryPills = document.querySelectorAll('.skills-category-pills .filter-pill');
+  DOM.skillsGrid = document.getElementById('skillsGrid');
+  DOM.customSkillModal = document.getElementById('customSkillModal');
+  DOM.closeSkillModalBtn = document.getElementById('closeSkillModalBtn');
+  DOM.cancelSkillModalBtn = document.getElementById('cancelSkillModalBtn');
+  DOM.saveCustomSkillBtn = document.getElementById('saveCustomSkillBtn');
+  DOM.newSkillEmoji = document.getElementById('newSkillEmoji');
+  DOM.newSkillName = document.getElementById('newSkillName');
+  DOM.newSkillCategory = document.getElementById('newSkillCategory');
+  DOM.newSkillDesc = document.getElementById('newSkillDesc');
+  DOM.newSkillPrompt = document.getElementById('newSkillPrompt');
 
   // Mode Pills
   DOM.modePills = document.querySelectorAll('.mode-pill');
@@ -173,7 +201,11 @@ function renderIcons() {
     boxCpuIcon: Icons.layers,
     modalRefreshIcon: Icons.refresh,
     boxParamsIcon: Icons.cpu,
-    boxTrashIcon: Icons.trash
+    boxTrashIcon: Icons.trash,
+    navSkillsIcon: Icons.zap,
+    studioSkillsIcon: Icons.zap,
+    createSkillPlusIcon: Icons.plus,
+    skillsSearchIcon: Icons.search
   };
 
   for (const [id, svg] of Object.entries(iconMappings)) {
@@ -329,6 +361,32 @@ function setupEventListeners() {
     if (e.target === DOM.mediaLightbox) closeLightbox();
   });
 
+  // AI Skills Events
+  DOM.navSkillsBtn.addEventListener('click', () => switchTab('skills'));
+  DOM.quickSkillSelectorBtn.addEventListener('click', () => switchTab('skills'));
+  DOM.clearSkillChipBtn.addEventListener('click', () => deactivateSkill());
+  DOM.openCreateSkillModalBtn.addEventListener('click', openCreateSkillModal);
+  DOM.closeSkillModalBtn.addEventListener('click', closeCreateSkillModal);
+  DOM.cancelSkillModalBtn.addEventListener('click', closeCreateSkillModal);
+  DOM.saveCustomSkillBtn.addEventListener('click', handleSaveCustomSkill);
+  DOM.customSkillModal.addEventListener('click', (e) => {
+    if (e.target === DOM.customSkillModal) closeCreateSkillModal();
+  });
+
+  DOM.skillsSearchInput.addEventListener('input', (e) => {
+    appState.skillsSearchQuery = e.target.value.toLowerCase().trim();
+    renderSkillsGrid();
+  });
+
+  DOM.skillsCategoryPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      DOM.skillsCategoryPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      appState.selectedSkillCategory = pill.dataset.cat;
+      renderSkillsGrid();
+    });
+  });
+
   // Scroll to bottom
   DOM.scrollToBottomBtn.addEventListener('click', scrollToBottom);
   DOM.chatViewport.addEventListener('scroll', () => {
@@ -346,10 +404,16 @@ function switchTab(tabId) {
   DOM.navChatBtn.classList.toggle('active', tabId === 'chat');
   DOM.navImageBtn.classList.toggle('active', tabId === 'image-studio');
   DOM.navVideoBtn.classList.toggle('active', tabId === 'video-studio');
+  DOM.navSkillsBtn.classList.toggle('active', tabId === 'skills');
 
   DOM.chatPanel.classList.toggle('active', tabId === 'chat');
   DOM.imageStudioPanel.classList.toggle('active', tabId === 'image-studio');
   DOM.videoStudioPanel.classList.toggle('active', tabId === 'video-studio');
+  DOM.skillsPanel.classList.toggle('active', tabId === 'skills');
+
+  if (tabId === 'skills') {
+    renderSkillsGrid();
+  }
 }
 
 function setInputMode(mode) {
@@ -795,6 +859,7 @@ async function executeChatCompletion() {
     role: 'assistant',
     content: '',
     model: appState.currentModel,
+    skill: appState.activeSkill ? appState.activeSkill.name : null,
     createdAt: new Date().toISOString()
   };
 
@@ -809,11 +874,16 @@ async function executeChatCompletion() {
 
   let streamingText = '';
 
+  const mergedSettings = {
+    ...State.getSettings(),
+    activeSkill: appState.activeSkill
+  };
+
   await OpenRouterAPI.streamChat({
     apiKey,
     model: appState.currentModel,
     messages: formattedPayload,
-    settings: State.getSettings(),
+    settings: mergedSettings,
     signal: appState.abortController.signal,
     onDelta: (delta, accumulated) => {
       streamingText = accumulated;
@@ -896,6 +966,7 @@ function appendMessageToUI(msg, shouldScroll = true) {
   }
 
   const modelBadge = msg.model ? `<span class="message-model-badge">${escapeHtml(msg.model.split('/')[1] || msg.model)}</span>` : '';
+  const skillBadge = msg.skill ? `<span class="message-model-badge" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.3);">⚡ ${escapeHtml(msg.skill)}</span>` : '';
 
   row.innerHTML = `
     <div class="message-avatar">
@@ -905,6 +976,7 @@ function appendMessageToUI(msg, shouldScroll = true) {
       <div class="message-header">
         <span class="sender-name">${isUser ? 'You' : 'Nexus AI'}</span>
         ${modelBadge}
+        ${skillBadge}
       </div>
       ${attachmentsHTML}
       <div class="message-body">${marked.parse(msg.content || '')}</div>
@@ -1288,6 +1360,174 @@ function closeLightbox() {
   DOM.lightboxImg.src = '';
   DOM.lightboxVideo.src = '';
   DOM.lightboxVideo.pause();
+}
+
+/* ============================================================
+   AI SKILLS SYSTEM FUNCTIONS
+   ============================================================ */
+function initSkillsUI() {
+  updateActiveSkillUI();
+}
+
+function updateActiveSkillUI() {
+  appState.activeSkill = State.getActiveSkill();
+
+  if (appState.activeSkill) {
+    if (DOM.activeSkillBadge) {
+      DOM.activeSkillBadge.textContent = appState.activeSkill.name.split(' ')[0];
+      DOM.activeSkillBadge.style.background = 'rgba(16, 185, 129, 0.2)';
+      DOM.activeSkillBadge.style.color = 'var(--accent-emerald)';
+    }
+
+    if (DOM.quickSkillEmoji) DOM.quickSkillEmoji.textContent = appState.activeSkill.icon || '⚡';
+    if (DOM.quickSkillName) DOM.quickSkillName.textContent = appState.activeSkill.name;
+
+    if (DOM.composerSkillChip) {
+      DOM.composerSkillChip.classList.remove('hidden');
+      DOM.composerSkillChipText.textContent = `${appState.activeSkill.icon || '⚡'} Skill: ${appState.activeSkill.name}`;
+    }
+  } else {
+    if (DOM.activeSkillBadge) {
+      DOM.activeSkillBadge.textContent = 'General';
+      DOM.activeSkillBadge.style.background = '';
+      DOM.activeSkillBadge.style.color = '';
+    }
+
+    if (DOM.quickSkillEmoji) DOM.quickSkillEmoji.textContent = '⚡';
+    if (DOM.quickSkillName) DOM.quickSkillName.textContent = 'Skill: General';
+
+    if (DOM.composerSkillChip) {
+      DOM.composerSkillChip.classList.add('hidden');
+    }
+  }
+}
+
+function activateSkill(skillId) {
+  State.setActiveSkillId(skillId);
+  updateActiveSkillUI();
+  renderSkillsGrid();
+  switchTab('chat');
+  DOM.chatPromptInput.focus();
+}
+
+function deactivateSkill() {
+  State.setActiveSkillId(null);
+  updateActiveSkillUI();
+  renderSkillsGrid();
+}
+
+function renderSkillsGrid() {
+  if (!DOM.skillsGrid) return;
+  DOM.skillsGrid.innerHTML = '';
+  const skills = State.getSkills();
+  const activeId = State.getActiveSkillId();
+  const query = appState.skillsSearchQuery || '';
+  const category = appState.selectedSkillCategory || 'all';
+
+  const filtered = skills.filter(s => {
+    const matchCat = category === 'all' || (category === 'Custom' ? s.isCustom : s.category === category);
+    const matchQuery = !query || s.name.toLowerCase().includes(query) || s.description.toLowerCase().includes(query);
+    return matchCat && matchQuery;
+  });
+
+  if (filtered.length === 0) {
+    DOM.skillsGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">No skills found matching "${escapeHtml(query || category)}". Click "+ Create Custom Skill" to add one!</div>`;
+    return;
+  }
+
+  filtered.forEach(skill => {
+    const isActive = activeId === skill.id;
+    const card = document.createElement('div');
+    card.className = `skill-card ${isActive ? 'active-skill' : ''}`;
+
+    card.innerHTML = `
+      <div>
+        <div class="skill-card-top">
+          <div class="skill-avatar-wrap">
+            <span class="skill-emoji-badge">${skill.icon || '🧠'}</span>
+            <div class="skill-title-group">
+              <span class="skill-card-name">${escapeHtml(skill.name)}</span>
+              <span class="skill-card-cat">${escapeHtml(skill.category || 'Specialist')}</span>
+            </div>
+          </div>
+          ${skill.isCustom ? `<button class="skill-delete-btn" title="Delete custom skill">${Icons.trash}</button>` : ''}
+        </div>
+        <p class="skill-card-desc">${escapeHtml(skill.description)}</p>
+      </div>
+      <div class="skill-card-bottom">
+        <button class="skill-toggle-btn ${isActive ? 'active' : ''}">
+          ${isActive ? `${Icons.check} Active Skill` : '⚡ Activate Skill'}
+        </button>
+      </div>
+    `;
+
+    const toggleBtn = card.querySelector('.skill-toggle-btn');
+    toggleBtn.addEventListener('click', () => {
+      if (isActive) {
+        deactivateSkill();
+      } else {
+        activateSkill(skill.id);
+      }
+    });
+
+    if (skill.isCustom) {
+      const delBtn = card.querySelector('.skill-delete-btn');
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (confirm(`Delete custom skill "${skill.name}"?`)) {
+          State.deleteCustomSkill(skill.id);
+          renderSkillsGrid();
+          updateActiveSkillUI();
+        }
+      });
+    }
+
+    DOM.skillsGrid.appendChild(card);
+  });
+}
+
+function openCreateSkillModal() {
+  DOM.newSkillEmoji.value = '🧠';
+  DOM.newSkillName.value = '';
+  DOM.newSkillCategory.value = 'Custom';
+  DOM.newSkillDesc.value = '';
+  DOM.newSkillPrompt.value = '';
+  DOM.customSkillModal.classList.remove('hidden');
+  DOM.newSkillName.focus();
+}
+
+function closeCreateSkillModal() {
+  DOM.customSkillModal.classList.add('hidden');
+}
+
+function handleSaveCustomSkill() {
+  const name = DOM.newSkillName.value.trim();
+  const desc = DOM.newSkillDesc.value.trim();
+  const prompt = DOM.newSkillPrompt.value.trim();
+  const emoji = DOM.newSkillEmoji.value.trim() || '🧠';
+  const category = DOM.newSkillCategory.value;
+
+  if (!name) {
+    alert('Please enter a Skill Name.');
+    DOM.newSkillName.focus();
+    return;
+  }
+  if (!prompt) {
+    alert('Please write system instructions for this skill.');
+    DOM.newSkillPrompt.focus();
+    return;
+  }
+
+  const created = State.addCustomSkill({
+    name,
+    icon: emoji,
+    category,
+    description: desc || `Custom ${name} persona.`,
+    prompt
+  });
+
+  closeCreateSkillModal();
+  activateSkill(created.id);
 }
 
 function escapeHtml(str) {
